@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "333224777365",
+    "project_id": "women-safety-2bbde",
+    "storage_bucket": "women-safety-2bbde.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:333224777365:android:95d99a49e6a1b9be046d9c",
+        "android_client_info": {
+          "package_name": "com.example.rescueastra"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKfw7smc1aPcXR4tU3hKLR1363b5OaAxc"
+        },
+        {
+          "current_key": "AIzaSyBQBDjcrBXZuT0WPRATX5lmNUPu20Rtiig"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:333224777365:android:93e65d2f3387aad7046d9c",
+        "android_client_info": {
+          "package_name": "com.mycompany.womensafety"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDKfw7smc1aPcXR4tU3hKLR1363b5OaAxc"
+        },
+        {
+          "current_key": "AIzaSyBQBDjcrBXZuT0WPRATX5lmNUPu20Rtiig"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
