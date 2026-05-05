@@ -1,7 +1,20 @@
+
 allprojects {
     repositories {
         google()
         mavenCentral()
+    }
+}
+
+subprojects {
+    afterEvaluate {
+        if (pluginManager.hasPlugin("com.android.library")) {
+            extensions.getByType(com.android.build.gradle.LibraryExtension::class.java).apply {
+                if (namespace == null) {
+                    namespace = "com.example.rescueastra.${project.name}"
+                }
+            }
+        }
     }
 }
 
