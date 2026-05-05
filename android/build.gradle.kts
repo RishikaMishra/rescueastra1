@@ -4,6 +4,13 @@ allprojects {
         google()
         mavenCentral()
     }
+    
+    configurations.all {
+        resolutionStrategy {
+            force("org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.22")
+            force("org.jetbrains.kotlin:kotlin-stdlib:1.8.22")
+        }
+    }
 }
 
 subprojects {
