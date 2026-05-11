@@ -9,7 +9,6 @@ import 'package:record/record.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_sms/flutter_sms.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SOSEmergencyService {
@@ -174,7 +173,7 @@ class SOSEmergencyService {
     return 'https://maps.google.com/?q=$latitude,$longitude';
   }
 
-  /// Send SMS to emergency contacts
+  /// Send SMS to emergency contacts using url_launcher
   Future<void> sendEmergencySMS(Position position) async {
     // Skip SMS on web platform
     if (kIsWeb) {
@@ -192,12 +191,21 @@ class SOSEmergencyService {
 
       for (String contact in emergencyContacts) {
         try {
-          await sendSMS(
-            message: message,
-            recipients: [contact],
-            sendDirect: true,
+          // Use url_launcher to open SMS app with pre-filled message
+          final Uri smsUri = Uri(
+            scheme: 'sms',
+            path: contact,
+            queryParameters: {
+              'body': message,
+            },
           );
-          print('SMS sent to $contact');
+          
+          if (await canLaunchUrl(smsUri)) {
+            await launchUrl(smsUri);
+            print('SMS app opened for $contact');
+          } else {
+            print('Could not launch SMS app for $contact');
+          }
         } catch (e) {
           print('Failed to send SMS to $contact: $e');
         }
