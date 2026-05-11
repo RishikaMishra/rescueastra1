@@ -14,6 +14,10 @@ class IncidentModel {
   final String? address;
   final int responseTime; // in minutes
   final List<String>? tags; // harassment, theft, assault, etc.
+  final List<String>? detectedThreats; // e.g., weapon, fire, suspicious object
+  final String? gender; // male, female, unknown
+  final List<String>? features; // e.g., crowd, vehicle, suspicious object
+  final bool? locationSearched; // true if this is from a search, not a report
 
   IncidentModel({
     required this.id,
@@ -29,6 +33,10 @@ class IncidentModel {
     this.address,
     required this.responseTime,
     this.tags,
+    this.detectedThreats,
+    this.gender,
+    this.features,
+    this.locationSearched,
   });
 
   // Convert from Firestore document
@@ -48,6 +56,10 @@ class IncidentModel {
       address: data['address'],
       responseTime: data['responseTime'] ?? 0,
       tags: data['tags'] != null ? List<String>.from(data['tags']) : null,
+      detectedThreats: data['detectedThreats'] != null ? List<String>.from(data['detectedThreats']) : null,
+      gender: data['gender'],
+      features: data['features'] != null ? List<String>.from(data['features']) : null,
+      locationSearched: data['locationSearched'],
     );
   }
 
@@ -66,6 +78,10 @@ class IncidentModel {
       'address': address,
       'responseTime': responseTime,
       'tags': tags,
+      'detectedThreats': detectedThreats,
+      'gender': gender,
+      'features': features,
+      'locationSearched': locationSearched,
     };
   }
 }
@@ -83,6 +99,9 @@ class HotspotModel {
   final List<String> commonTags;
   final String? areaName;
   final Map<String, dynamic>? timePatterns; // hour/day patterns
+  final Map<String, int>? detectedThreatsSummary; // threat type -> count
+  final Map<String, int>? genderDistribution; // gender -> count
+  final Map<String, int>? featureSummary; // feature/term -> count
 
   HotspotModel({
     required this.id,
@@ -97,6 +116,9 @@ class HotspotModel {
     required this.commonTags,
     this.areaName,
     this.timePatterns,
+    this.detectedThreatsSummary,
+    this.genderDistribution,
+    this.featureSummary,
   });
 
   factory HotspotModel.fromFirestore(DocumentSnapshot doc) {
@@ -114,6 +136,9 @@ class HotspotModel {
       commonTags: List<String>.from(data['commonTags'] ?? []),
       areaName: data['areaName'],
       timePatterns: data['timePatterns'],
+      detectedThreatsSummary: data['detectedThreatsSummary'] != null ? Map<String, int>.from(data['detectedThreatsSummary']) : null,
+      genderDistribution: data['genderDistribution'] != null ? Map<String, int>.from(data['genderDistribution']) : null,
+      featureSummary: data['featureSummary'] != null ? Map<String, int>.from(data['featureSummary']) : null,
     );
   }
 
@@ -130,6 +155,9 @@ class HotspotModel {
       'commonTags': commonTags,
       'areaName': areaName,
       'timePatterns': timePatterns,
+      'detectedThreatsSummary': detectedThreatsSummary,
+      'genderDistribution': genderDistribution,
+      'featureSummary': featureSummary,
     };
   }
 }

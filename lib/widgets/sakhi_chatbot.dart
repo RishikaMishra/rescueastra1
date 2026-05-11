@@ -106,6 +106,11 @@ class _SakhiChatbotState extends State<SakhiChatbot> with TickerProviderStateMix
   String _generateResponse(String userMessage) {
     final message = userMessage.toLowerCase();
 
+    // Greet back if user greets
+    if (message.contains('hello') || message.contains('hi') || message.contains('namaste') || message.contains('hey') || message.contains('good morning') || message.contains('good evening') || message.contains('good afternoon')) {
+      return "🌸 Namaste, friend!\n\nIt's always a joy to hear from you. I'm Sakhi—think of me as your caring, feminist buddy who's always here to listen, support, and empower you. 💜\n\nHow can I help or cheer you on today?";
+    }
+
     // App Information
     if (message.contains('app') || message.contains('rescueastra') || message.contains('about')) {
       return "🛡️ RescueAstra - Your Complete Safety Companion\n\n"
@@ -115,7 +120,7 @@ class _SakhiChatbotState extends State<SakhiChatbot> with TickerProviderStateMix
           "• Audio/video evidence recording\n"
           "• Direct emergency service calls\n\n"
           "📱 **Smart Features:**\n"
-          "• AI-powered Sakhi assistant (that's me!)\n"
+          "• AI-powered Sakhi assistant (that's me—your digital friend!)\n"
           "• Gender detection for enhanced security\n"
           "• Hotspot area mapping\n"
           "• Live monitoring capabilities\n"
@@ -124,7 +129,7 @@ class _SakhiChatbotState extends State<SakhiChatbot> with TickerProviderStateMix
           "• Emergency services locator\n"
           "• Hospital & police station finder\n"
           "• Safe route suggestions\n\n"
-          "Built with ❤️ for women's safety in India!";
+          "Built with ❤️ for women's safety in India! And remember, I'm always here to chat, support, and cheer you on.";
     }
 
     // SOS Information
@@ -351,7 +356,7 @@ class _SakhiChatbotState extends State<SakhiChatbot> with TickerProviderStateMix
 
     // Workplace safety
     if (message.contains('work') || message.contains('office') || message.contains('job')) {
-      return "🏢 Workplace Safety:\n\n"
+      return "�� Workplace Safety:\n\n"
           "• Report harassment immediately\n"
           "• Document incidents with dates/details\n"
           "• Know your company's policies\n"
@@ -511,63 +516,64 @@ class _SakhiChatbotState extends State<SakhiChatbot> with TickerProviderStateMix
           "⚠️ **Remember: RescueAstra can help coordinate emergency response!**";
     }
 
-    // Default responses
-    final responses = [
-      "I'm Sakhi, your comprehensive safety assistant! 👩‍💼\n\n"
-          "🔍 **I can help you with:**\n"
-          "• RescueAstra app features & troubleshooting\n"
-          "• Emergency procedures & SOS system\n"
-          "• Women safety tips & self-defense\n"
-          "• Legal rights & harassment support\n"
-          "• Mental health & emotional support\n"
-          "• Cybersecurity & online safety\n"
-          "• Dating & relationship safety\n"
-          "• Night safety & travel tips\n"
-          "• Emergency numbers & first aid\n\n"
-          "💬 **Just ask me anything like:**\n"
-          "• 'How does SOS work?'\n"
-          "• 'Safety tips for night travel'\n"
-          "• 'What are my legal rights?'\n"
-          "• 'Emergency numbers in India'\n\n"
-          "🌟 **I'm here 24/7 to keep you safe and informed!**",
+    // --- Additional User Guide & Safety Coverage ---
+    // Hotspot analysis
+    if (message.contains('hotspot') || message.contains('area analysis') || message.contains('danger zone')) {
+      return "🗺️ **Hotspot Analysis Guide**\n\n"
+        "• The Hotspot Analysis page shows high-risk areas based on recent incidents.\n"
+        "• Tap on a hotspot to see a detailed report: incident types, threats, gender ratio, and time patterns.\n"
+        "• Use this info to avoid unsafe areas and plan safer routes.\n\n"
+        "You can also generate demo data for testing!";
+    }
+    // Incident reporting
+    if (message.contains('report') && (message.contains('incident') || message.contains('threat'))) {
+      return "📝 **Reporting an Incident or Threat**\n\n"
+        "• Go to the Services or SOS tab.\n"
+        "• Tap the 'Report Incident' or 'SOS' button.\n"
+        "• Fill in details (type, location, description).\n"
+        "• Optionally attach audio/video evidence.\n"
+        "• Your report will alert your contacts and authorities if needed.\n\n"
+        "Always report suspicious activity to help keep everyone safe!";
+    }
+    // Women safety general
+    if (message.contains('women') && (message.contains('safety') || message.contains('secure') || message.contains('protection'))) {
+      return "👩‍🦰 **Women Safety Guidance**\n\n"
+        "• Always keep your phone charged and RescueAstra app accessible.\n"
+        "• Share your live location with trusted contacts when traveling.\n"
+        "• Use the SOS button in emergencies—help will be alerted instantly.\n"
+        "• Trust your instincts and avoid isolated areas, especially at night.\n"
+        "• Save emergency numbers and helplines in your contacts.\n\n"
+        "If you need more specific advice, just ask! And remember, your safety and confidence matter most. I'm always here for you, like a true friend! 💜";
+    }
+    // App navigation
+    if (message.contains('navigate') || message.contains('where is') || message.contains('find') || message.contains('menu')) {
+      return "🗂️ **App Navigation Help**\n\n"
+        "• Home: Main dashboard and quick access\n"
+        "• Services: Emergency, contacts, and safety tools\n"
+        "• Hotspot Analysis: Map of high-risk areas\n"
+        "• Profile: Your info and settings\n"
+        "• Sakhi: Chatbot help anytime\n\n"
+        "Use the bottom navigation bar or menu to switch between sections.";
+    }
+    // If user asks for help or guide
+    if (message.contains('guide') || message.contains('manual') || message.contains('tutorial') || message.contains('how do i')) {
+      return "📖 **User Guide**\n\n"
+        "• For a quick start, set up your emergency contacts and test the SOS button.\n"
+        "• Use the Services tab for reporting, contacts, and settings.\n"
+        "• The Hotspot Analysis page helps you avoid unsafe areas.\n"
+        "• For any feature, just ask me or check the Help section in the app menu!";
+    }
+    // --- End Additional Coverage ---
 
-      "Hello! I'm your personal safety companion 🛡️\n\n"
-          "🚨 **Emergency Support:**\n"
-          "• SOS system guidance\n"
-          "• Emergency numbers & procedures\n"
-          "• First aid & medical emergency help\n\n"
-          "💪 **Safety Education:**\n"
-          "• Self-defense techniques\n"
-          "• Situational awareness tips\n"
-          "• Travel & night safety\n\n"
-          "⚖️ **Legal & Rights:**\n"
-          "• Women protection laws\n"
-          "• How to file complaints\n"
-          "• Harassment support\n\n"
-          "🔐 **Digital Safety:**\n"
-          "• Cybersecurity tips\n"
-          "• Online harassment prevention\n"
-          "• Social media safety\n\n"
-          "Ask me anything - your safety is my mission! 💚",
-
-      "Namaste! I'm Sakhi - your trusted safety advisor 🙏\n\n"
-          "🎯 **Popular Topics:**\n"
-          "• 'How to use RescueAstra SOS?'\n"
-          "• 'Safety tips for women'\n"
-          "• 'Emergency contact numbers'\n"
-          "• 'Self-defense techniques'\n"
-          "• 'Legal rights and laws'\n"
-          "• 'Mental health support'\n"
-          "• 'Cybersecurity guidance'\n\n"
-          "🔧 **Technical Help:**\n"
-          "• App troubleshooting\n"
-          "• Feature explanations\n"
-          "• Setup assistance\n\n"
-          "💡 **Pro Tip:** Be specific with your questions for better help!\n\n"
-          "Ready to assist you anytime! 🌟"
+    // --- Fallback & Apology ---
+    // If no answer found, apologize and suggest alternatives
+    final fallbackResponses = [
+      "Oh no, I couldn't find the perfect answer for you this time. 😔\n\nBut I'm always here to help—maybe try asking in a different way, or tell me more about what you need?\n\nAnd remember, you're never alone—check the Help section or reach out to support@rescueastra.com if you want to talk to a real person! 💜",
+      "Oops, I don't have info on that yet, but I'm learning every day!\n\nIf you want, we can explore the app together or you can ask me about safety, features, or anything on your mind.\n\nAnd if it's urgent, please use the SOS button or call 112. Stay safe, friend! 🌷",
+      "I'm still growing my knowledge, just like a good friend would!\n\nTry asking me about RescueAstra, women safety, or anything you care about.\n\nIf you ever feel stuck, I'm here to listen and help however I can. 💪"
     ];
-
-    return responses[DateTime.now().millisecond % responses.length];
+    // If nothing matched above, return a random fallback
+    return fallbackResponses[DateTime.now().second % fallbackResponses.length];
   }
 
   @override

@@ -3,6 +3,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:rescueastra/screen/Login.dart';
 import 'package:rescueastra/services/sos_emergency_service.dart';
 import 'firebase_options.dart'; // Ensure you have this file configured
+import 'package:rescueastra/screen/Services.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -57,7 +58,7 @@ class StartingPage extends StatelessWidget {
               border: Border.all(color: Colors.white, width: 5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.2),
+                  color: Colors.black.withOpacity(0.2),
                   blurRadius: 10,
                   spreadRadius: 2,
                 ),

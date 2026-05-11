@@ -37,6 +37,161 @@ class DemoDataGenerator {
     
     final severityLevels = ['low', 'medium', 'high', 'critical'];
     
+    // Always add fixed incidents for specific locations in Delhi NCR
+    final fixedIncidents = [
+      {
+        'userId': 'demo_user_connaught',
+        'timestamp': Timestamp.fromDate(now.subtract(const Duration(days: 1))),
+        'location': {'latitude': 28.6304, 'longitude': 77.2177},
+        'incidentType': 'harassment',
+        'severity': 'high',
+        'status': 'resolved',
+        'responseTime': 5,
+        'description': 'Verbal harassment by unknown person - High priority situation',
+        'address': 'Connaught Place, Delhi',
+        'tags': ['verbal_harassment', 'audio_evidence', 'contacts_notified'],
+        'audioRecording': null,
+        'videoRecording': null,
+        'emergencyContacts': [
+          {'name': 'Emergency Contact 1', 'phone': '+911234567890', 'relation': 'family'}
+        ],
+        'createdAt': Timestamp.fromDate(now.subtract(const Duration(days: 1))),
+        'isDemo': true,
+        'gender': 'female',
+        'detectedThreats': ['verbal'],
+      },
+      {
+        'userId': 'demo_user_noida',
+        'timestamp': Timestamp.fromDate(now.subtract(const Duration(days: 2))),
+        'location': {'latitude': 28.5700, 'longitude': 77.3210},
+        'incidentType': 'theft',
+        'severity': 'medium',
+        'status': 'active',
+        'responseTime': 10,
+        'description': 'Bag stolen from public transport - Medium priority situation',
+        'address': 'Noida City Centre, Noida',
+        'tags': ['personal_belongings', 'contacts_notified'],
+        'audioRecording': null,
+        'videoRecording': null,
+        'emergencyContacts': [
+          {'name': 'Emergency Contact 2', 'phone': '+911234567891', 'relation': 'friend'}
+        ],
+        'createdAt': Timestamp.fromDate(now.subtract(const Duration(days: 2))),
+        'isDemo': true,
+        'gender': 'male',
+        'detectedThreats': ['weapon'],
+      },
+      {
+        'userId': 'demo_user_gurgaon',
+        'timestamp': Timestamp.fromDate(now.subtract(const Duration(days: 3))),
+        'location': {'latitude': 28.5045, 'longitude': 77.0970},
+        'incidentType': 'assault',
+        'severity': 'critical',
+        'status': 'resolved',
+        'responseTime': 3,
+        'description': 'Physical altercation with stranger - URGENT: Immediate danger',
+        'address': 'MG Road, Gurgaon',
+        'tags': ['immediate_danger', 'contacts_notified'],
+        'audioRecording': null,
+        'videoRecording': null,
+        'emergencyContacts': [
+          {'name': 'Emergency Contact 3', 'phone': '+911234567892', 'relation': 'colleague'}
+        ],
+        'createdAt': Timestamp.fromDate(now.subtract(const Duration(days: 3))),
+        'isDemo': true,
+        'gender': 'female',
+        'detectedThreats': ['physical'],
+      },
+      {
+        'userId': 'demo_user_laxminagar',
+        'timestamp': Timestamp.fromDate(now.subtract(const Duration(days: 4))),
+        'location': {'latitude': 28.6038, 'longitude': 77.2774},
+        'incidentType': 'stalking',
+        'severity': 'low',
+        'status': 'resolved',
+        'responseTime': 8,
+        'description': 'Being followed by unknown person',
+        'address': 'Laxmi Nagar, Delhi',
+        'tags': ['audio_evidence'],
+        'audioRecording': null,
+        'videoRecording': null,
+        'emergencyContacts': [
+          {'name': 'Emergency Contact 4', 'phone': '+911234567893', 'relation': 'family'}
+        ],
+        'createdAt': Timestamp.fromDate(now.subtract(const Duration(days: 4))),
+        'isDemo': true,
+        'gender': 'female',
+        'detectedThreats': [],
+      },
+      {
+        'userId': 'demo_user_rohini',
+        'timestamp': Timestamp.fromDate(now.subtract(const Duration(days: 5))),
+        'location': {'latitude': 28.7499, 'longitude': 77.0565},
+        'incidentType': 'suspicious_activity',
+        'severity': 'medium',
+        'status': 'active',
+        'responseTime': 12,
+        'description': 'Suspicious person in the area',
+        'address': 'Rohini, Delhi',
+        'tags': ['suspicious_object'],
+        'audioRecording': null,
+        'videoRecording': null,
+        'emergencyContacts': [
+          {'name': 'Emergency Contact 5', 'phone': '+911234567894', 'relation': 'friend'}
+        ],
+        'createdAt': Timestamp.fromDate(now.subtract(const Duration(days: 5))),
+        'isDemo': true,
+        'gender': 'unknown',
+        'detectedThreats': ['suspicious_object'],
+      },
+      {
+        'userId': 'demo_user_khatana',
+        'timestamp': Timestamp.fromDate(now.subtract(const Duration(days: 6))),
+        'location': {'latitude': 28.3866, 'longitude': 77.3076},
+        'incidentType': 'emergency',
+        'severity': 'high',
+        'status': 'active',
+        'responseTime': 7,
+        'description': 'General emergency situation - High priority situation',
+        'address': 'Khatana Chowk, Dabua Colony, NIT Faridabad',
+        'tags': ['contacts_notified'],
+        'audioRecording': null,
+        'videoRecording': null,
+        'emergencyContacts': [
+          {'name': 'Emergency Contact 6', 'phone': '+911234567895', 'relation': 'family'}
+        ],
+        'createdAt': Timestamp.fromDate(now.subtract(const Duration(days: 6))),
+        'isDemo': true,
+        'gender': 'female',
+        'detectedThreats': ['verbal'],
+      },
+      {
+        'userId': 'demo_user_pali',
+        'timestamp': Timestamp.fromDate(now.subtract(const Duration(days: 7))),
+        'location': {'latitude': 28.4100, 'longitude': 77.2100},
+        'incidentType': 'harassment',
+        'severity': 'medium',
+        'status': 'resolved',
+        'responseTime': 9,
+        'description': 'Inappropriate comments and gestures - Medium priority situation',
+        'address': 'Pali gaon, Faridabad',
+        'tags': ['verbal_harassment', 'contacts_notified'],
+        'audioRecording': null,
+        'videoRecording': null,
+        'emergencyContacts': [
+          {'name': 'Emergency Contact 7', 'phone': '+911234567896', 'relation': 'friend'}
+        ],
+        'createdAt': Timestamp.fromDate(now.subtract(const Duration(days: 7))),
+        'isDemo': true,
+        'gender': 'female',
+        'detectedThreats': ['verbal'],
+      },
+    ];
+    for (final incident in fixedIncidents) {
+      final docRef = _firestore.collection('emergency_alerts').doc();
+      batch.set(docRef, incident);
+    }
+    
     for (int i = 0; i < count; i++) {
       // Choose a hotspot center (80% chance) or random location (20% chance)
       late double lat, lng;
@@ -77,6 +232,24 @@ class DemoDataGenerator {
       final severity = severityLevels[_random.nextInt(severityLevels.length)];
       final responseTime = _random.nextInt(30) + 1; // 1-30 minutes
       
+      // Generate gender (bias towards female for Delhi)
+      String gender = 'female';
+      if (_random.nextDouble() < 0.2) gender = 'male';
+      if (_random.nextDouble() < 0.05) gender = 'unknown';
+
+      // Generate detected threats (realistic for incident type)
+      List<String> detectedThreats = [];
+      if (incidentType == 'harassment' || incidentType == 'assault') {
+        if (_random.nextBool()) detectedThreats.add('verbal');
+        if (_random.nextBool()) detectedThreats.add('physical');
+      }
+      if (incidentType == 'theft') {
+        if (_random.nextBool()) detectedThreats.add('weapon');
+      }
+      if (incidentType == 'suspicious_activity') {
+        if (_random.nextBool()) detectedThreats.add('suspicious_object');
+      }
+      
       // Generate realistic tags based on incident type and time
       final tags = <String>[];
       if (incidentType == 'harassment') tags.add('verbal_harassment');
@@ -107,6 +280,8 @@ class DemoDataGenerator {
         'emergencyContacts': _generateEmergencyContacts(),
         'createdAt': Timestamp.fromDate(timestamp),
         'isDemo': true, // Mark as demo data for easy cleanup
+        'gender': gender,
+        'detectedThreats': detectedThreats,
       };
       
       final docRef = _firestore.collection('emergency_alerts').doc();

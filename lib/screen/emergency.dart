@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_phone_direct_caller/flutter_phone_direct_caller.dart';
 
 void main() {
   runApp(const MaterialApp(
@@ -13,12 +14,7 @@ class EmergencyPage extends StatelessWidget {
 
   // Function to make a direct call
   void _makeCall(String number) async {
-    final Uri url = Uri.parse('tel:$number');
-    if (await canLaunchUrl(url)) {
-      await launchUrl(url);
-    } else {
-      // Handle error silently or show user-friendly message
-    }
+    await FlutterPhoneDirectCaller.callNumber(number);
   }
 
   @override

@@ -35,13 +35,10 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   url_launcher: ^6.1.14
-  http: ^0.13.3
+  http: ^1.0.0
   shared_preferences: ^2.0.0
   firebase_auth: ^5.5.2
   firebase_auth_web: ^5.5.2
-  google_maps_flutter: ^2.5.0
-  flutter_google_places: ^0.3.0
-  google_maps_webservice: ^0.0.20-nullsafety
   geocoding: ^2.0.5
   fl_chart: ^0.63.0
   firebase_core: ^3.13.0
@@ -53,10 +50,14 @@ dependencies:
   telephony: ^0.2.0
   camera: ^0.10.5+9
   path_provider: ^2.1.2
-  record: ^5.0.4
+  record: ^6.0.0
   firebase_storage: ^12.3.2
   cloud_firestore: ^5.4.4
   flutter_sms: ^2.3.3
+  flutter_map: ^6.1.0
+  latlong2: ^0.9.0
+  pie_chart: ^5.3.2
+  flutter_phone_direct_caller: ^2.1.1
 
 
 

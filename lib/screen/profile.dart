@@ -67,12 +67,6 @@ class _ProfilePageState extends State<ProfilePage> {
       case 'logout':
         _showLogoutDialog();
         break;
-      case 'settings':
-        // TODO: Navigate to settings page
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Settings coming soon!')),
-        );
-        break;
     }
   }
 
@@ -123,16 +117,6 @@ class _ProfilePageState extends State<ProfilePage> {
             icon: const Icon(Icons.more_vert, color: Colors.white),
             itemBuilder: (BuildContext context) {
               return [
-                const PopupMenuItem<String>(
-                  value: 'settings',
-                  child: Row(
-                    children: [
-                      Icon(Icons.settings, color: Colors.grey),
-                      SizedBox(width: 8),
-                      Text('Settings'),
-                    ],
-                  ),
-                ),
                 const PopupMenuItem<String>(
                   value: 'logout',
                   child: Row(
@@ -526,8 +510,6 @@ class _ProfileSectionState extends State<ProfileSection> {
       ),
     );
   }
-
-
 
   Widget _buildAppStatsCard() {
     return Card(
@@ -1007,6 +989,201 @@ class _ProfileSectionState extends State<ProfileSection> {
           ],
         );
       },
+    );
+  }
+}
+
+// Add SettingsPage
+class SettingsPage extends StatelessWidget {
+  final VoidCallback onLogout;
+  const SettingsPage({Key? key, required this.onLogout}) : super(key: key);
+
+  void _showEditProfileDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (context) {
+        final nameController = TextEditingController();
+        final phoneController = TextEditingController();
+        return AlertDialog(
+          title: Text('Edit Profile'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: nameController,
+                decoration: InputDecoration(labelText: 'Name'),
+              ),
+              TextField(
+                controller: phoneController,
+                decoration: InputDecoration(labelText: 'Phone'),
+                keyboardType: TextInputType.phone,
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: Text('Cancel'),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                // TODO: Save profile changes to backend
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Profile updated!')),
+                );
+              },
+              child: Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showPrivacySettingsDialog(BuildContext context) {
+    bool profileVisible = true;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Privacy Settings'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SwitchListTile(
+                    title: Text('Profile Visible'),
+                    value: profileVisible,
+                    onChanged: (val) {
+                      setState(() => profileVisible = val);
+                    },
+                  ),
+                  // Add more privacy options here
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Close'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    // TODO: Save privacy settings
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Privacy settings updated!')),
+                    );
+                  },
+                  child: Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showNotificationSettingsDialog(BuildContext context) {
+    bool sosAlerts = true;
+    bool appUpdates = true;
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Notification Settings'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  SwitchListTile(
+                    title: Text('SOS Alerts'),
+                    value: sosAlerts,
+                    onChanged: (val) {
+                      setState(() => sosAlerts = val);
+                    },
+                  ),
+                  SwitchListTile(
+                    title: Text('App Updates'),
+                    value: appUpdates,
+                    onChanged: (val) {
+                      setState(() => appUpdates = val);
+                    },
+                  ),
+                  // Add more notification options here
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: Text('Close'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    // TODO: Save notification settings
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Notification settings updated!')),
+                    );
+                  },
+                  child: Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Settings'),
+        backgroundColor: Colors.deepPurple,
+      ),
+      body: ListView(
+        children: [
+          ListTile(
+            leading: Icon(Icons.edit, color: Colors.deepPurple),
+            title: Text('Edit Profile'),
+            onTap: () => _showEditProfileDialog(context),
+          ),
+          ListTile(
+            leading: Icon(Icons.privacy_tip, color: Colors.deepPurple),
+            title: Text('Privacy Settings'),
+            onTap: () => _showPrivacySettingsDialog(context),
+          ),
+          ListTile(
+            leading: Icon(Icons.notifications, color: Colors.deepPurple),
+            title: Text('Notification Settings'),
+            onTap: () => _showNotificationSettingsDialog(context),
+          ),
+          ListTile(
+            leading: Icon(Icons.info, color: Colors.deepPurple),
+            title: Text('App Info'),
+            onTap: () {
+              showAboutDialog(
+                context: context,
+                applicationName: 'RescueAstra',
+                applicationVersion: '1.0.0',
+                applicationLegalese: '© 2024 RescueAstra',
+                children: [Text('A women safety app built with ❤️.')],
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: Icon(Icons.logout, color: Colors.red),
+            title: Text('Logout', style: TextStyle(color: Colors.red)),
+            onTap: onLogout,
+          ),
+        ],
+      ),
     );
   }
 }

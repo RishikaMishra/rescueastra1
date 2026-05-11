@@ -340,9 +340,39 @@ class HotspotAnalysisService {
       query = query.where('incidentCount', isGreaterThanOrEqualTo: minIncidents);
     }
     
-    final querySnapshot = await query.get();
+    final querySnapshot = await query .get();
     return querySnapshot.docs
         .map((doc) => HotspotModel.fromFirestore(doc))
         .toList();
+  }
+
+  /// Get incidents near a location (for analysis, gender, threat, etc.)
+  Future<List<IncidentModel>> getIncidentsNearLocation(
+    double latitude,
+    double longitude,
+    double radiusKm,
+  ) async {
+    final cutoffDate = DateTime.now().subtract(Duration(days: ANALYSIS_PERIOD_DAYS));
+    final latDelta = radiusKm / 111.0;
+    final lngDelta = radiusKm / (111.0 * cos(latitude * pi / 180));
+    final querySnapshot = await _firestore
+        .collection('emergency_alerts')
+        .where('timestamp', isGreaterThan: Timestamp.fromDate(cutoffDate))
+        .where('location.latitude', isGreaterThan: latitude - latDelta)
+        .where('location.latitude', isLessThan: latitude + latDelta)
+        .get();
+    final incidents = querySnapshot.docs
+        .map((doc) => _convertToIncidentModel(doc))
+        .where((incident) => incident != null)
+        .cast<IncidentModel>()
+        .where((incident) {
+          final distance = Geolocator.distanceBetween(
+            latitude, longitude,
+            incident.latitude, incident.longitude,
+          );
+          return distance <= radiusKm * 1000;
+        })
+        .toList();
+    return incidents;
   }
 }

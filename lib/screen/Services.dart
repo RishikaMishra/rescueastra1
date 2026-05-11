@@ -1,7 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:google_maps_webservice/places.dart';
-import 'dart:async';
 import 'dart:math' as math;
 import 'package:flutter/foundation.dart' show kIsWeb;
 import '../utils/web_map_utils.dart' if (dart.library.html) '../utils/web_map_utils_web.dart';
@@ -9,16 +6,15 @@ import '../widgets/location_search_field.dart';
 import '../widgets/hotspot_map_widget.dart';
 import '../models/incident_model.dart';
 import '../services/hotspot_analysis_service.dart';
-
-// Google Maps API key with billing enabled and proper restrictions
-const kGoogleApiKey = 'AIzaSyBQBDjcrBXZuT0WPRATX5lmNUPu20Rtiig';
-final places = GoogleMapsPlaces(apiKey: kGoogleApiKey);
+import 'package:flutter_map/flutter_map.dart' as fm;
+import 'package:latlong2/latlong.dart' as latlng;
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:geolocator/geolocator.dart';
+import 'package:pie_chart/pie_chart.dart';
+import '../utils/demo_data_generator.dart';
 
 void main() {
-  // Initialize Google Maps for Web
-  if (kIsWeb) {
-    configureWebGoogleMaps();
-  }
   runApp(MyApp());
 }
 
@@ -36,7 +32,8 @@ class MyApp extends StatelessWidget {
 }
 
 class ServicesPage extends StatefulWidget {
-  const ServicesPage({super.key});
+  final int initialTab;
+  const ServicesPage({super.key, this.initialTab = 0});
 
   @override
   State<ServicesPage> createState() => ServicesPageState();
@@ -44,36 +41,62 @@ class ServicesPage extends StatefulWidget {
 
 class ServicesPageState extends State<ServicesPage> with TickerProviderStateMixin {
   late TabController _tabController;
-  GoogleMapController? _controller;
-  LatLng? _selectedLocation;
-  final LatLng _currentLocation = LatLng(20.5937, 78.9629); // Default location (India)
-  final Set<Marker> _markers = {};
-  final Set<Polyline> _polylines = {};
+  latlng.LatLng? _selectedLocation;
+  latlng.LatLng? _currentLocation; // Make this nullable and dynamic
+  final List<latlng.LatLng> _polylinePoints = [];
+  final List<fm.Marker> _markers = [];
   String _distanceText = "";
   String _durationText = "";
   final TextEditingController _locationController = TextEditingController();
+  List<IncidentModel> _searchedIncidents = [];
+  bool _isRouteLoading = false;
+  String? _routeError;
+  bool _isLocating = true;
 
   @override
   void initState() {
     super.initState();
-    _tabController = TabController(length: 2, vsync: this);
+    _tabController = TabController(length: 2, vsync: this, initialIndex: widget.initialTab);
+    _fetchCurrentLocation();
+  }
 
-    // Add marker for India location
-    _markers.add(
-      Marker(
-        markerId: MarkerId('currentLocation'),
-        position: _currentLocation,
-        icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueAzure),
-        infoWindow: InfoWindow(title: 'India'),
-      ),
-    );
-
-    // Add a delay to ensure the map is properly loaded before manipulating it
-    Future.delayed(Duration(milliseconds: 500), () {
-      if (_controller != null) {
-        _controller!.animateCamera(CameraUpdate.newLatLngZoom(_currentLocation, 5.0));
+  Future<void> _fetchCurrentLocation() async {
+    setState(() { _isLocating = true; });
+    try {
+      // Import geolocator at the top if not already
+      // import 'package:geolocator/geolocator.dart';
+      final permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        await Geolocator.requestPermission();
       }
-    });
+      final position = await Geolocator.getCurrentPosition(desiredAccuracy: LocationAccuracy.high);
+      setState(() {
+        _currentLocation = latlng.LatLng(position.latitude, position.longitude);
+        _markers.clear();
+        _markers.add(
+          fm.Marker(
+            key: ValueKey('currentLocation'),
+            point: _currentLocation!,
+            child: Icon(Icons.my_location, color: Colors.blue, size: 40),
+          ),
+        );
+        _isLocating = false;
+      });
+    } catch (e) {
+      setState(() {
+        // Fallback to India if location fails
+        _currentLocation = latlng.LatLng(20.5937, 78.9629);
+        _markers.clear();
+        _markers.add(
+          fm.Marker(
+            key: ValueKey('currentLocation'),
+            point: _currentLocation!,
+            child: Icon(Icons.location_on, color: Colors.red, size: 40),
+          ),
+        );
+        _isLocating = false;
+      });
+    }
   }
 
   @override
@@ -83,28 +106,49 @@ class ServicesPageState extends State<ServicesPage> with TickerProviderStateMixi
     super.dispose();
   }
 
-
-
-
-
-
-
   // Calculate route between current location and destination
-  void _calculateRoute() {
-    if (_selectedLocation != null) {
-      // Create a polyline between the two points
-      _polylines.clear();
-      _polylines.add(
-        Polyline(
-          polylineId: PolylineId('route'),
-          points: [_currentLocation, _selectedLocation!],
-          color: Colors.blue,
-          width: 5,
-        ),
-      );
-
-      // Calculate approximate distance and duration
-      _calculateDistanceAndDuration();
+  Future<void> _calculateRoute() async {
+    if (_selectedLocation != null && _currentLocation != null) {
+      setState(() {
+        _isRouteLoading = true;
+        _routeError = null;
+      });
+      try {
+        final start = _currentLocation!;
+        final end = _selectedLocation!;
+        final url = Uri.parse(
+          'https://router.project-osrm.org/route/v1/driving/'
+          '${start.longitude},${start.latitude};${end.longitude},${end.latitude}?overview=full&geometries=geojson',
+        );
+        final response = await http.get(url);
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final coords = data['routes'][0]['geometry']['coordinates'] as List;
+          _polylinePoints.clear();
+          for (final c in coords) {
+            _polylinePoints.add(latlng.LatLng(c[1], c[0]));
+          }
+          // Optionally, update _distanceText and _durationText from API
+          final distance = data['routes'][0]['distance'] ?? 0.0;
+          final duration = data['routes'][0]['duration'] ?? 0.0;
+          setState(() {
+            _distanceText = distance > 1000 ? "${(distance / 1000).toStringAsFixed(1)} km" : "${distance.round()} m";
+            _durationText = duration > 3600 ? "${(duration / 3600).toStringAsFixed(1)} hours" : "${(duration / 60).round()} mins";
+          });
+        } else {
+          setState(() {
+            _routeError = 'Failed to fetch route (status ${response.statusCode})';
+          });
+        }
+      } catch (e) {
+        setState(() {
+          _routeError = 'Error fetching route: $e';
+        });
+      } finally {
+        setState(() {
+          _isRouteLoading = false;
+        });
+      }
     }
   }
 
@@ -113,8 +157,8 @@ class ServicesPageState extends State<ServicesPage> with TickerProviderStateMixi
     if (_selectedLocation != null) {
       // Calculate distance using the Haversine formula
       double distanceInMeters = _calculateDistance(
-        _currentLocation.latitude,
-        _currentLocation.longitude,
+        _currentLocation!.latitude,
+        _currentLocation!.longitude,
         _selectedLocation!.latitude,
         _selectedLocation!.longitude
       );
@@ -157,28 +201,18 @@ class ServicesPageState extends State<ServicesPage> with TickerProviderStateMixi
     return degree * math.pi / 180;
   }
 
-  // Fit map bounds to show all markers
-  void _fitBounds() {
-    if (_selectedLocation != null && _controller != null) {
-      LatLngBounds bounds = LatLngBounds(
-        southwest: LatLng(
-          math.min(_currentLocation.latitude, _selectedLocation!.latitude),
-          math.min(_currentLocation.longitude, _selectedLocation!.longitude),
-        ),
-        northeast: LatLng(
-          math.max(_currentLocation.latitude, _selectedLocation!.latitude),
-          math.max(_currentLocation.longitude, _selectedLocation!.longitude),
-        ),
-      );
-
-      _controller!.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
-    }
-  }
-
-
-
   @override
   Widget build(BuildContext context) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_routeError != null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(_routeError!)),
+        );
+        setState(() {
+          _routeError = null;
+        });
+      }
+    });
     return Scaffold(
       appBar: AppBar(
         title: const Text('Safety Services'),
@@ -206,133 +240,145 @@ class ServicesPageState extends State<ServicesPage> with TickerProviderStateMixi
   }
 
   Widget _buildNavigationTab() {
+    if (_isLocating || _currentLocation == null) {
+      return const Center(child: CircularProgressIndicator());
+    }
     return SafeArea(
-      child: Column(
-        children: [
-          // Location search bar with auto-suggestions
-          Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            color: Colors.white,
-            child: LocationSearchField(
-              apiKey: kGoogleApiKey,
-              controller: _locationController,
-              hint: 'Search locations in India',
-              onLocationSelected: (LatLng position, String address) {
-                setState(() {
-                  _selectedLocation = position;
-                  _markers.removeWhere((marker) => marker.markerId.value == 'selectedLocation');
-                  _markers.add(
-                    Marker(
-                      markerId: MarkerId('selectedLocation'),
-                      position: position,
-                      infoWindow: InfoWindow(title: address),
-                    ),
-                  );
-                  _calculateRoute();
-                });
-
-                // Move camera to show both markers
-                _fitBounds();
-              },
-            ),
-          ),
-
-          // Map view
-          Expanded(
-            flex: 4, // Increased from 2 to 4 for better visualization
-            child: AbsorbPointer(
-              absorbing: false,
-              child: GoogleMap(
-                onMapCreated: (GoogleMapController controller) {
-                  setState(() {
-                    _controller = controller;
-                  });
-                },
-                initialCameraPosition: CameraPosition(
-                  target: _currentLocation,
-                  zoom: 5.0, // Zoom out to show more of India
-                  bearing: 0,
-                  tilt: 0,
-                ),
-                onTap: (position) {
+      child: SingleChildScrollView(
+        child: Column(
+          children: [
+            // Location search bar with auto-suggestions
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              color: Colors.white,
+              child: LocationSearchField(
+                controller: _locationController,
+                hint: 'Search locations in India',
+                onLocationSelected: (latlng.LatLng position, String address) async {
                   setState(() {
                     _selectedLocation = position;
-                    _markers.removeWhere((marker) => marker.markerId.value == 'selectedLocation');
+                    _markers.removeWhere((marker) => marker.key == ValueKey('selectedLocation'));
                     _markers.add(
-                      Marker(
-                        markerId: MarkerId('selectedLocation'),
-                        position: position,
-                        infoWindow: InfoWindow(title: 'Selected Location'),
+                      fm.Marker(
+                        key: ValueKey('selectedLocation'),
+                        point: position,
+                        child: Icon(Icons.location_on, color: Colors.red, size: 40),
                       ),
                     );
-                    _calculateRoute();
-                    _locationController.text = "Selected Location";
+                  });
+                  await _calculateRoute();
+                  // Fetch incidents near the searched location (2km radius)
+                  final incidents = await HotspotAnalysisService().getIncidentsNearLocation(
+                    position.latitude,
+                    position.longitude,
+                    2.0,
+                  );
+                  setState(() {
+                    _searchedIncidents = incidents;
                   });
                 },
-                markers: _markers,
-                polylines: _polylines,
-                myLocationEnabled: kIsWeb ? false : true, // Disable on web to avoid errors
-                myLocationButtonEnabled: kIsWeb ? false : true, // Disable on web to avoid errors
-                mapToolbarEnabled: true,
-                zoomControlsEnabled: true,
-                mapType: MapType.normal,
-                compassEnabled: true,
-                trafficEnabled: false,
-                rotateGesturesEnabled: true,
-                scrollGesturesEnabled: true,
-                zoomGesturesEnabled: true,
-                tiltGesturesEnabled: true,
               ),
             ),
-          ),
-
-          // Direction info panel
-          if (_selectedLocation != null)
+            // Map view
             Container(
-              padding: EdgeInsets.all(12),
-              color: Colors.white,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              height: 350,
+              child: Stack(
                 children: [
-                  Text(
-                    'Directions to: ${_locationController.text}',
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-                  ),
-                  SizedBox(height: 8),
-                  Row(
+                  fm.FlutterMap(
+                    options: fm.MapOptions(
+                      initialCenter: _currentLocation!,
+                      initialZoom: 15.0,
+                      onTap: (tapPosition, position) {
+                        setState(() {
+                          _selectedLocation = position;
+                          _markers.removeWhere((marker) => marker.key == ValueKey('selectedLocation'));
+                          _markers.add(
+                            fm.Marker(
+                              key: ValueKey('selectedLocation'),
+                              point: position,
+                              child: Icon(Icons.location_on, color: Colors.red, size: 40),
+                            ),
+                          );
+                          _calculateRoute();
+                          _locationController.text = "Selected Location";
+                        });
+                      },
+                    ),
                     children: [
-                      Icon(Icons.directions_car, color: Colors.deepPurple),
-                      SizedBox(width: 8),
-                      Text('Distance: $_distanceText'),
-                      SizedBox(width: 16),
-                      Icon(Icons.access_time, color: Colors.deepPurple),
-                      SizedBox(width: 8),
-                      Text('ETA: $_durationText'),
+                      fm.TileLayer(
+                        urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                        subdomains: ['a', 'b', 'c'],
+                      ),
+                      fm.MarkerLayer(markers: _markers),
+                      fm.PolylineLayer(
+                        polylines: [
+                          fm.Polyline(
+                            points: _polylinePoints,
+                            color: Colors.blue,
+                            strokeWidth: 5,
+                          ),
+                        ],
+                      ),
                     ],
                   ),
+                  if (_isRouteLoading)
+                    Positioned.fill(
+                      child: Container(
+                        color: Colors.black.withOpacity(0.2),
+                        child: Center(child: CircularProgressIndicator()),
+                      ),
+                    ),
                 ],
               ),
             ),
 
-          // Safety information
-          Expanded(
-            flex: _selectedLocation != null ? 1 : 2, // Reduced to give more space to the map
-            child: ListView(
-              padding: EdgeInsets.all(16),
-              children: [
-                Row(
+            // Direction info panel
+            if (_selectedLocation != null)
+              Container(
+                padding: EdgeInsets.all(12),
+                color: Colors.white,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Expanded(child: _buildGenderCard()),
-                    SizedBox(width: 16),
-                    Expanded(child: _buildThreatCard()),
+                    Text(
+                      'Directions to: ${_locationController.text}',
+                      style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                    ),
+                    SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Icon(Icons.directions_car, color: Colors.deepPurple),
+                        SizedBox(width: 8),
+                        Text('Distance: $_distanceText'),
+                        SizedBox(width: 16),
+                        Icon(Icons.access_time, color: Colors.deepPurple),
+                        SizedBox(width: 8),
+                        Text('ETA: $_durationText'),
+                      ],
+                    ),
                   ],
                 ),
-                SizedBox(height: 16),
-                _buildRecentAlerts(),
-              ],
+              ),
+
+            // Safety information
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                children: [
+                  Row(
+                    children: [
+                      Expanded(child: _buildGenderCard()),
+                      SizedBox(width: 16),
+                      Expanded(child: _buildThreatCard()),
+                    ],
+                  ),
+                  SizedBox(height: 16),
+                  _buildRecentAlerts(),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -393,28 +439,53 @@ class ServicesPageState extends State<ServicesPage> with TickerProviderStateMixi
             ],
           ),
         ),
-
-        // Hotspot map
-        Expanded(
-          child: HotspotMapWidget(
-            initialLatitude: _currentLocation.latitude,
-            initialLongitude: _currentLocation.longitude,
-            onHotspotTapped: (hotspot) {
-              _showHotspotInfo(hotspot);
-            },
-          ),
-        ),
-
-        // Legend
+        // Legend with Delhi Safety Analysis button on the same row
         Container(
           padding: const EdgeInsets.all(16),
           color: Colors.white,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Risk Levels',
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              Row(
+                children: [
+                  const Text(
+                    'Risk Levels',
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                  Spacer(),
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(24),
+                      ),
+                      elevation: 6,
+                    ),
+                    icon: Icon(Icons.analytics),
+                    label: Text('Delhi Safety Analysis'),
+                    onPressed: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+                        ),
+                        builder: (context) => DraggableScrollableSheet(
+                          expand: false,
+                          initialChildSize: 0.85,
+                          minChildSize: 0.5,
+                          maxChildSize: 0.95,
+                          builder: (context, scrollController) => SingleChildScrollView(
+                            controller: scrollController,
+                            child: DelhiSafetyStats(),
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               Row(
@@ -427,6 +498,16 @@ class ServicesPageState extends State<ServicesPage> with TickerProviderStateMixi
                 ],
               ),
             ],
+          ),
+        ),
+        // Hotspot map
+        Expanded(
+          child: HotspotMapWidget(
+            initialLatitude: _currentLocation?.latitude ?? 0.0,
+            initialLongitude: _currentLocation?.longitude ?? 0.0,
+            onHotspotTapped: (hotspot) {
+              _showHotspotInfo(hotspot);
+            },
           ),
         ),
       ],
@@ -481,6 +562,23 @@ class ServicesPageState extends State<ServicesPage> with TickerProviderStateMixi
   }
 
   Widget _buildGenderCard() {
+    if (_searchedIncidents.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text("No gender data for this location."),
+        ),
+      );
+    }
+    int women = 0;
+    int men = 0;
+    for (final incident in _searchedIncidents) {
+      // Example: check tags or fields for gender info
+      if (incident.tags != null && incident.tags!.contains('women')) women++;
+      if (incident.tags != null && incident.tags!.contains('men')) men++;
+    }
+    int total = women + men;
+    String percent = total > 0 ? "${((women / total) * 100).toStringAsFixed(0)}%" : "-";
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -488,14 +586,14 @@ class ServicesPageState extends State<ServicesPage> with TickerProviderStateMixi
           children: [
             Text("Gender Ratio", style: TextStyle(fontSize: 18)),
             SizedBox(height: 8),
-            Text("70%", style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+            Text(percent, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
             Text("Women"),
             SizedBox(height: 8),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
               children: [
-                Column(children: [Text("12", style: TextStyle(fontWeight: FontWeight.bold)), Text("Women")]),
-                Column(children: [Text("5", style: TextStyle(fontWeight: FontWeight.bold)), Text("Men")]),
+                Column(children: [Text("$women", style: TextStyle(fontWeight: FontWeight.bold)), Text("Women")]),
+                Column(children: [Text("$men", style: TextStyle(fontWeight: FontWeight.bold)), Text("Men")]),
               ],
             )
           ],
@@ -505,6 +603,42 @@ class ServicesPageState extends State<ServicesPage> with TickerProviderStateMixi
   }
 
   Widget _buildThreatCard() {
+    if (_searchedIncidents.isEmpty) {
+      return Card(
+        child: Padding(
+          padding: const EdgeInsets.all(16),
+          child: Text("No threat data for this location."),
+        ),
+      );
+    }
+    // Aggregate threat level (use highest severity or weighted average)
+    final severityOrder = {'low': 1, 'medium': 2, 'high': 3, 'critical': 4};
+    int maxSeverity = 0;
+    for (final incident in _searchedIncidents) {
+      maxSeverity = incident.severity != null && severityOrder[incident.severity] != null
+        ? (severityOrder[incident.severity]! > maxSeverity ? severityOrder[incident.severity]! : maxSeverity)
+        : maxSeverity;
+    }
+    String threatLabel = "Unknown";
+    Color threatColor = Colors.grey;
+    switch (maxSeverity) {
+      case 4:
+        threatLabel = "Critical";
+        threatColor = Colors.red;
+        break;
+      case 3:
+        threatLabel = "High";
+        threatColor = Colors.orange;
+        break;
+      case 2:
+        threatLabel = "Medium";
+        threatColor = Colors.yellow;
+        break;
+      case 1:
+        threatLabel = "Low";
+        threatColor = Colors.green;
+        break;
+    }
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -515,13 +649,13 @@ class ServicesPageState extends State<ServicesPage> with TickerProviderStateMixi
             Container(
               height: 20,
               decoration: BoxDecoration(
-                gradient: LinearGradient(colors: [Colors.green, Colors.yellow, Colors.orange, Colors.red]),
+                color: threatColor,
                 borderRadius: BorderRadius.circular(10),
               ),
             ),
             SizedBox(height: 8),
-            Text("Moderate", style: TextStyle(fontWeight: FontWeight.bold)),
-            Text("Based on time, location, demographics", textAlign: TextAlign.center),
+            Text(threatLabel, style: TextStyle(fontWeight: FontWeight.bold)),
+            Text("Based on incidents in this area", textAlign: TextAlign.center),
           ],
         ),
       ),
@@ -560,7 +694,7 @@ class ServicesPageState extends State<ServicesPage> with TickerProviderStateMixi
                     GestureDetector(
                       onTap: () {
                         if (_selectedLocation != null) {
-                          _controller?.animateCamera(CameraUpdate.newLatLngZoom(_selectedLocation!, 15));
+                          // Placeholder for the removed _controller
                         }
                       },
                       child: Text("View on map", style: TextStyle(color: Colors.deepPurple, fontWeight: FontWeight.bold)),
@@ -574,6 +708,171 @@ class ServicesPageState extends State<ServicesPage> with TickerProviderStateMixi
       }).toList(),
     );
   }
+}
 
+class DelhiSafetyStats extends StatefulWidget {
+  @override
+  _DelhiSafetyStatsState createState() => _DelhiSafetyStatsState();
+}
 
+class _DelhiSafetyStatsState extends State<DelhiSafetyStats> {
+  int totalIncidents = 0;
+  int unsafeForWomen = 0;
+  Map<String, int> genderCounts = {};
+  double threatDetectionRate = 0.0;
+  List<IncidentModel> unsafeForWomenList = [];
+  bool loading = false;
+  String? errorMsg;
+  bool analyzedOnce = false;
+
+  Future<void> _generateDemoData() async {
+    setState(() { loading = true; errorMsg = null; });
+    try {
+      await DemoDataGenerator.generateDemoEmergencyAlerts(
+        count: 100,
+        centerLat: 28.6139,
+        centerLng: 77.2090,
+        radiusKm: 10.0,
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Demo data generated!')),
+      );
+      await _analyze();
+    } catch (e) {
+      setState(() { errorMsg = 'Failed to generate demo data: $e'; });
+    } finally {
+      setState(() { loading = false; });
+    }
+  }
+
+  Future<void> _analyze() async {
+    setState(() { loading = true; errorMsg = null; });
+    try {
+      final incidents = await HotspotAnalysisService().getIncidentsNearLocation(
+        28.6139, 77.2090, 2.0,
+      );
+      print('Fetched incidents: \\${incidents.length}');
+      final unsafe = incidents.where((i) =>
+        i.gender == 'female' &&
+        (i.incidentType == 'harassment' ||
+         i.incidentType == 'assault' ||
+         i.incidentType == 'stalking')
+      ).toList();
+      final genderMap = <String, int>{};
+      for (var i in incidents) {
+        if (i.gender != null) {
+          genderMap[i.gender!] = (genderMap[i.gender!] ?? 0) + 1;
+        }
+      }
+      final threatIncidents = incidents.where((i) => i.detectedThreats != null && i.detectedThreats!.isNotEmpty).length;
+      setState(() {
+        totalIncidents = incidents.length;
+        unsafeForWomen = unsafe.length;
+        genderCounts = genderMap;
+        threatDetectionRate = incidents.isNotEmpty ? (threatIncidents / incidents.length) : 0.0;
+        unsafeForWomenList = unsafe;
+        analyzedOnce = true;
+      });
+    } catch (e) {
+      setState(() { errorMsg = 'Failed to fetch or analyze data: $e'; });
+    } finally {
+      setState(() { loading = false; });
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _analyze();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Delhi Women Safety Analysis', style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: Colors.deepPurple)),
+            SizedBox(height: 12),
+            ElevatedButton.icon(
+              onPressed: loading ? null : _generateDemoData,
+              icon: Icon(Icons.data_usage),
+              label: Text('Generate Demo Data for Delhi'),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.deepPurple),
+            ),
+            SizedBox(height: 16),
+            if (loading) Center(child: CircularProgressIndicator()),
+            if (errorMsg != null) ...[
+              SizedBox(height: 12),
+              Text(errorMsg!, style: TextStyle(color: Colors.red)),
+            ],
+            if (!loading && errorMsg == null) ...[
+              if (analyzedOnce && totalIncidents == 0)
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  child: Text('No data found for Delhi. Please generate demo data or check your connection.', style: TextStyle(color: Colors.orange, fontSize: 16)),
+                ),
+              Card(
+                elevation: 2,
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Total Incidents: $totalIncidents', style: TextStyle(fontSize: 16)),
+                      Text('Unsafe for Women: $unsafeForWomen', style: TextStyle(fontSize: 16, color: Colors.red)),
+                      SizedBox(height: 10),
+                      Text('Gender Ratio:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      genderCounts.isNotEmpty
+                        ? PieChart(
+                            dataMap: genderCounts.map((k, v) => MapEntry(k, v.toDouble())),
+                            chartType: ChartType.ring,
+                            chartRadius: 100,
+                            legendOptions: const LegendOptions(showLegends: true),
+                          )
+                        : Text('No gender data'),
+                      SizedBox(height: 10),
+                      Text('Threat Detection Rate:', style: TextStyle(fontWeight: FontWeight.bold)),
+                      LinearProgressIndicator(
+                        value: threatDetectionRate,
+                        minHeight: 10,
+                        backgroundColor: Colors.grey[300],
+                        color: Colors.red,
+                      ),
+                      SizedBox(height: 4),
+                      Text('${(threatDetectionRate * 100).toStringAsFixed(1)}%', style: TextStyle(fontSize: 14)),
+                    ],
+                  ),
+                ),
+              ),
+              SizedBox(height: 18),
+              Text('Unsafe-for-Women Incidents in Delhi:', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              SizedBox(height: 8),
+              unsafeForWomenList.isNotEmpty
+                ? ListView.builder(
+                    shrinkWrap: true,
+                    physics: NeverScrollableScrollPhysics(),
+                    itemCount: unsafeForWomenList.length,
+                    itemBuilder: (context, index) {
+                      final incident = unsafeForWomenList[index];
+                      return Card(
+                        margin: EdgeInsets.symmetric(vertical: 4),
+                        child: ListTile(
+                          leading: Icon(Icons.warning, color: Colors.red),
+                          title: Text('${incident.incidentType} at ${incident.address ?? 'Unknown'}'),
+                          subtitle: Text(incident.description ?? ''),
+                          trailing: Text(incident.severity, style: TextStyle(color: Colors.deepPurple)),
+                        ),
+                      );
+                    },
+                  )
+                : Text('No unsafe-for-women incidents found.'),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }

@@ -135,6 +135,50 @@ class LandingContent extends StatelessWidget {
   final VoidCallback? onSakhiTap;
   const LandingContent({super.key, this.onSakhiTap});
 
+  void _handleFeatureTap(BuildContext context, String feature) {
+    switch (feature) {
+      case "Gender Detection":
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Gender Detection'),
+            content: Text('This feature uses AI to detect gender for enhanced safety. (Demo/Info only)'),
+            actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('Close'))],
+          ),
+        );
+        break;
+      case "Emergency services locator":
+        Navigator.push(context, MaterialPageRoute(builder: (context) => ServicesPage()));
+        break;
+      case "Sakhi Assistant":
+        if (onSakhiTap != null) onSakhiTap!();
+        break;
+      case "SOS Gesture":
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('SOS Gesture'),
+            content: Text('Shake your phone 3 times or press & hold the SOS button to trigger an emergency alert.'),
+            actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('Close'))],
+          ),
+        );
+        break;
+      case "Hotspot Areas":
+        Navigator.push(context, MaterialPageRoute(builder: (context) => ServicesPage(initialTab: 1)));
+        break;
+      case "Live Monitoring":
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Live Monitoring'),
+            content: Text('Live monitoring helps keep you safe by tracking your journey and alerting contacts if needed. (Demo/Info only)'),
+            actions: [TextButton(onPressed: () => Navigator.pop(context), child: Text('Close'))],
+          ),
+        );
+        break;
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return SingleChildScrollView(
@@ -198,11 +242,7 @@ class LandingContent extends StatelessWidget {
           mainAxisSpacing: 12,
           children: features
               .map((f) => GestureDetector(
-            onTap: () {
-              if (f[0] == "Sakhi Assistant" && onSakhiTap != null) {
-                onSakhiTap!();
-              }
-            },
+            onTap: () => _handleFeatureTap(context, f[0] as String),
             child: Card(
               elevation: 3,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -213,18 +253,86 @@ class LandingContent extends StatelessWidget {
                     Icon(f[1] as IconData, size: 40, color: const Color(0xFFA82B66)),
                     SizedBox(height: 10),
                     Text(f[0] as String, textAlign: TextAlign.center),
-                    if (f[0] == "Sakhi Assistant")
-                      Padding(
-                        padding: EdgeInsets.only(top: 4),
-                        child: Text(
-                          "Tap to chat",
-                          style: TextStyle(
-                            fontSize: 10,
-                            color: Colors.deepPurple[600],
-                            fontStyle: FontStyle.italic,
-                          ),
-                        ),
-                      ),
+                    Builder(
+                      builder: (context) {
+                        switch (f[0]) {
+                          case "Sakhi Assistant":
+                            return Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: Text(
+                                "Tap to chat",
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.deepPurple[600],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            );
+                          case "Gender Detection":
+                            return Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: Text(
+                                "Tap for info",
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.deepPurple[600],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            );
+                          case "Emergency services locator":
+                            return Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: Text(
+                                "Tap to open",
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.deepPurple[600],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            );
+                          case "SOS Gesture":
+                            return Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: Text(
+                                "Tap for info",
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.deepPurple[600],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            );
+                          case "Hotspot Areas":
+                            return Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: Text(
+                                "Tap to open",
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.deepPurple[600],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            );
+                          case "Live Monitoring":
+                            return Padding(
+                              padding: EdgeInsets.only(top: 4),
+                              child: Text(
+                                "Tap for info",
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  color: Colors.deepPurple[600],
+                                  fontStyle: FontStyle.italic,
+                                ),
+                              ),
+                            );
+                          default:
+                            return SizedBox.shrink();
+                        }
+                      },
+                    ),
                   ],
                 ),
               ),

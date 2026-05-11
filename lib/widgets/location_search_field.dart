@@ -1,17 +1,16 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:google_maps_webservice/places.dart';
+import 'package:latlong2/latlong.dart' as latlng;
+import 'package:http/http.dart' as http;
 import 'dart:async';
+import 'dart:convert';
 
 class LocationSearchField extends StatefulWidget {
-  final String apiKey;
   final TextEditingController controller;
-  final Function(LatLng position, String address) onLocationSelected;
+  final Function(latlng.LatLng position, String address) onLocationSelected;
   final String hint;
 
   const LocationSearchField({
     super.key,
-    required this.apiKey,
     required this.controller,
     required this.onLocationSelected,
     this.hint = 'Search locations',
@@ -23,15 +22,13 @@ class LocationSearchField extends StatefulWidget {
 
 class _LocationSearchFieldState extends State<LocationSearchField> {
   final FocusNode _focusNode = FocusNode();
-  late GoogleMapsPlaces _places;
-  List<Prediction> _predictions = [];
+  List<Map<String, dynamic>> _predictions = [];
   Timer? _debounce;
   bool _isSearching = false;
 
   @override
   void initState() {
     super.initState();
-    _places = GoogleMapsPlaces(apiKey: widget.apiKey);
     widget.controller.addListener(_onSearchChanged);
   }
 
@@ -58,22 +55,20 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
 
   Future<void> _searchPlaces(String input) async {
     if (input.isEmpty) return;
-
     setState(() {
       _isSearching = true;
     });
-
     try {
-      final response = await _places.autocomplete(
-        input,
-        language: 'en',
-        components: [Component(Component.country, 'in')], // India
-        types: ['geocode', 'address', 'establishment', 'regions', 'cities'],
-      );
-
-      if (response.isOkay) {
+      final url = Uri.parse('https://nominatim.openstreetmap.org/search?q=${Uri.encodeComponent(input)}&format=json&addressdetails=1&limit=5&countrycodes=in');
+      final response = await http.get(url, headers: {'User-Agent': 'RescueAstra/1.0'});
+      if (response.statusCode == 200) {
+        final List results = List.from(jsonDecode(response.body));
         setState(() {
-          _predictions = response.predictions;
+          _predictions = results.map((e) => {
+            'displayName': e['display_name'],
+            'lat': double.tryParse(e['lat'] ?? '0') ?? 0.0,
+            'lon': double.tryParse(e['lon'] ?? '0') ?? 0.0,
+          }).toList();
           _isSearching = false;
         });
       } else {
@@ -90,25 +85,16 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
     }
   }
 
-  Future<void> _selectPlace(Prediction prediction) async {
-    try {
-      final details = await _places.getDetailsByPlaceId(prediction.placeId!);
-      if (details.isOkay) {
-        final lat = details.result.geometry!.location.lat;
-        final lng = details.result.geometry!.location.lng;
-        final address = details.result.formattedAddress ?? prediction.description ?? '';
-
-        widget.controller.text = address;
-        widget.onLocationSelected(LatLng(lat, lng), address);
-
-        setState(() {
-          _predictions = [];
-        });
-        _focusNode.unfocus();
-      }
-    } catch (e) {
-      // Handle error silently or show user-friendly message
-    }
+  void _selectPlace(Map<String, dynamic> prediction) {
+    final lat = prediction['lat'] as double;
+    final lon = prediction['lon'] as double;
+    final address = prediction['displayName'] as String;
+    widget.controller.text = address;
+    widget.onLocationSelected(latlng.LatLng(lat, lon), address);
+    setState(() {
+      _predictions = [];
+    });
+    _focusNode.unfocus();
   }
 
   @override
@@ -183,7 +169,7 @@ class _LocationSearchFieldState extends State<LocationSearchField> {
                 return ListTile(
                   leading: Icon(Icons.location_on, color: Colors.deepPurple),
                   title: Text(
-                    _predictions[index].description ?? '',
+                    _predictions[index]['displayName'] as String,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),

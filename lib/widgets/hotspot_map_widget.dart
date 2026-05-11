@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import '../models/incident_model.dart';
 import '../services/hotspot_analysis_service.dart';
+import 'package:flutter_map/flutter_map.dart' as fm;
+import 'package:latlong2/latlong.dart' as latlng;
 
 class HotspotMapWidget extends StatefulWidget {
   final double? initialLatitude;
@@ -25,9 +26,8 @@ class HotspotMapWidget extends StatefulWidget {
 }
 
 class _HotspotMapWidgetState extends State<HotspotMapWidget> {
-  GoogleMapController? _mapController;
-  Set<Marker> _markers = {};
-  Set<Circle> _circles = {};
+  Set<fm.Marker> _markers = {};
+  Set<fm.CircleMarker> _circles = {};
   List<HotspotModel> _hotspots = [];
   Position? _currentPosition;
   bool _isLoading = true;
@@ -79,8 +79,8 @@ class _HotspotMapWidgetState extends State<HotspotMapWidget> {
   }
 
   void _updateMapMarkers() {
-    final markers = <Marker>{};
-    final circles = <Circle>{};
+    final markers = <fm.Marker>{};
+    final circles = <fm.CircleMarker>{};
 
     // Filter hotspots based on selected risk level
     final filteredHotspots = _selectedRiskLevel == 'all'
@@ -90,32 +90,18 @@ class _HotspotMapWidgetState extends State<HotspotMapWidget> {
     for (final hotspot in filteredHotspots) {
       // Add marker for hotspot center
       markers.add(
-        Marker(
-          markerId: MarkerId(hotspot.id),
-          position: LatLng(hotspot.centerLatitude, hotspot.centerLongitude),
-          icon: _getMarkerIcon(hotspot.riskLevel),
-          infoWindow: InfoWindow(
-            title: hotspot.areaName ?? 'Hotspot',
-            snippet: '${hotspot.incidentCount} incidents - ${hotspot.riskLevel} risk',
-            onTap: () => _showHotspotDetails(hotspot),
-          ),
-          onTap: () {
-            if (widget.onHotspotTapped != null) {
-              widget.onHotspotTapped!(hotspot);
-            }
-          },
+        fm.Marker(
+          point: latlng.LatLng(hotspot.centerLatitude, hotspot.centerLongitude),
+          child: _getMarkerIcon(hotspot.riskLevel),
         ),
       );
 
       // Add circle to show hotspot area
       circles.add(
-        Circle(
-          circleId: CircleId('circle_${hotspot.id}'),
-          center: LatLng(hotspot.centerLatitude, hotspot.centerLongitude),
+        fm.CircleMarker(
+          point: latlng.LatLng(hotspot.centerLatitude, hotspot.centerLongitude),
+          color: _getCircleColor(hotspot.riskLevel).withAlpha(128),
           radius: hotspot.radius,
-          fillColor: _getCircleColor(hotspot.riskLevel).withOpacity(0.2),
-          strokeColor: _getCircleColor(hotspot.riskLevel),
-          strokeWidth: 2,
         ),
       );
     }
@@ -123,11 +109,9 @@ class _HotspotMapWidgetState extends State<HotspotMapWidget> {
     // Add user location marker if available
     if (_currentPosition != null && widget.showUserLocation) {
       markers.add(
-        Marker(
-          markerId: const MarkerId('user_location'),
-          position: LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
-          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueBlue),
-          infoWindow: const InfoWindow(title: 'Your Location'),
+        fm.Marker(
+          point: latlng.LatLng(_currentPosition!.latitude, _currentPosition!.longitude),
+          child: _getUserLocationIcon(),
         ),
       );
     }
@@ -138,17 +122,12 @@ class _HotspotMapWidgetState extends State<HotspotMapWidget> {
     });
   }
 
-  BitmapDescriptor _getMarkerIcon(String riskLevel) {
-    switch (riskLevel) {
-      case 'critical':
-        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueRed);
-      case 'high':
-        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange);
-      case 'medium':
-        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueYellow);
-      default:
-        return BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueGreen);
-    }
+  Widget _getMarkerIcon(String riskLevel) {
+    return Icon(Icons.location_on, color: _getCircleColor(riskLevel));
+  }
+
+  Widget _getUserLocationIcon() {
+    return Icon(Icons.location_on, color: Colors.blue);
   }
 
   Color _getCircleColor(String riskLevel) {
@@ -200,7 +179,7 @@ class _HotspotMapWidgetState extends State<HotspotMapWidget> {
           Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
-              color: _getCircleColor(hotspot.riskLevel).withOpacity(0.1),
+              color: _getCircleColor(hotspot.riskLevel).withAlpha(128),
               border: Border(
                 bottom: BorderSide(color: Colors.grey[200]!),
               ),
@@ -252,6 +231,32 @@ class _HotspotMapWidgetState extends State<HotspotMapWidget> {
                   _buildDetailRow('Last Updated', _formatDate(hotspot.lastUpdated)),
                   
                   const SizedBox(height: 16),
+                  // --- Enhanced Report Section ---
+                  if (hotspot.detectedThreatsSummary != null && hotspot.detectedThreatsSummary!.isNotEmpty) ...[
+                    const Text('Threats Detected', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    ...hotspot.detectedThreatsSummary!.entries.map(
+                      (entry) => _buildDetailRow(entry.key, '${entry.value}'),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (hotspot.genderDistribution != null && hotspot.genderDistribution!.isNotEmpty) ...[
+                    const Text('Gender Distribution', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    ...hotspot.genderDistribution!.entries.map(
+                      (entry) => _buildDetailRow(entry.key, '${entry.value}'),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  if (hotspot.featureSummary != null && hotspot.featureSummary!.isNotEmpty) ...[
+                    const Text('Detected Features', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    ...hotspot.featureSummary!.entries.map(
+                      (entry) => _buildDetailRow(entry.key, '${entry.value}'),
+                    ),
+                    const SizedBox(height: 16),
+                  ],
+                  // --- End Enhanced Report Section ---
                   const Text(
                     'Incident Types',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
@@ -326,7 +331,7 @@ class _HotspotMapWidgetState extends State<HotspotMapWidget> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    final initialPosition = LatLng(
+    final initialPosition = latlng.LatLng(
       widget.initialLatitude ?? _currentPosition?.latitude ?? 28.6139, // Delhi default
       widget.initialLongitude ?? _currentPosition?.longitude ?? 77.2090,
     );
@@ -366,19 +371,19 @@ class _HotspotMapWidgetState extends State<HotspotMapWidget> {
         
         // Map
         Expanded(
-          child: GoogleMap(
-            onMapCreated: (GoogleMapController controller) {
-              _mapController = controller;
-            },
-            initialCameraPosition: CameraPosition(
-              target: initialPosition,
-              zoom: widget.initialZoom,
+          child: fm.FlutterMap(
+            options: fm.MapOptions(
+              initialCenter: initialPosition,
+              initialZoom: widget.initialZoom,
             ),
-            markers: _markers,
-            circles: _circles,
-            myLocationEnabled: widget.showUserLocation,
-            myLocationButtonEnabled: widget.showUserLocation,
-            mapType: MapType.normal,
+            children: [
+              fm.TileLayer(
+                urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
+                subdomains: ['a', 'b', 'c'],
+              ),
+              fm.MarkerLayer(markers: _markers.toList()),
+              fm.CircleLayer(circles: _circles.toList()),
+            ],
           ),
         ),
       ],
